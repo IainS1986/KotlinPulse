@@ -7,6 +7,7 @@ import android.widget.Toast
 import com.stanford.kotlinpulse.Camera.CameraEngine
 import com.stanford.kotlinpulse.Camera.PermissionsHelper
 import kotlinx.android.synthetic.main.activity_main.*
+import org.opencv.android.OpenCVLoader
 
 class MainActivity : AppCompatActivity() {
 
@@ -39,6 +40,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         surfaceView.holder.addCallback(surfaceReadyCallback)
+
+        // Test OpenCV
+        if (!OpenCVLoader.initDebug()) {}
     }
 
     override fun onRequestPermissionsResult(
