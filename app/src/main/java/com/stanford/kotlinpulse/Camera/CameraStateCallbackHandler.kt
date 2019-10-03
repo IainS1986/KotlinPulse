@@ -2,16 +2,12 @@ package com.stanford.kotlinpulse.Camera
 
 import android.hardware.camera2.CameraDevice
 
-class CameraStateCallbackHandler(onOpened : (device : CameraDevice) -> Unit) : CameraDevice.StateCallback()
+class CameraStateCallbackHandler(callback : (device : CameraDevice) -> Unit) : CameraDevice.StateCallback()
 {
-    var OnOpened: (device : CameraDevice) -> Unit
-
-    init {
-        this.OnOpened = onOpened
-    }
+    var onOpenedCallback: (device : CameraDevice) -> Unit = callback
 
     override fun onOpened(p0: CameraDevice) {
-        OnOpened(p0)
+        onOpenedCallback(p0)
     }
 
     override fun onDisconnected(p0: CameraDevice) { }

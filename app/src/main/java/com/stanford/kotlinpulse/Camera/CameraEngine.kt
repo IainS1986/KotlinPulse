@@ -3,7 +3,6 @@ package com.stanford.kotlinpulse.Camera
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
-import android.graphics.Camera
 import android.graphics.ImageFormat
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
@@ -14,43 +13,37 @@ import android.os.Handler
 import android.view.Surface
 import android.view.SurfaceView
 import com.stanford.kotlinpulse.R
-import kotlinx.android.synthetic.main.activity_main.view.*
 import java.lang.Exception
 
 class CameraEngine(activity: Activity) {
 
-    private var Manager : CameraManager? = null
+    private lateinit var _cameraManager : CameraManager
 
-    private var Preview : SurfaceView? = null
+    private lateinit var _preview : SurfaceView
 
-    private var Device : CameraDevice? = null
+    private lateinit var _cameraDevice : CameraDevice
 
-    private var PreviewSurface : Surface? = null
+    private lateinit var _previewSurface : Surface
 
-    private var Activity : Activity? = null
-
-    init
-    {
-        this.Activity = activity
-    }
+    private var _activity : Activity = activity
 
     @SuppressLint("MissingPermission")
     fun start()
     {
-        Preview = Activity!!.findViewById(R.id.surfaceView) as SurfaceView
+        _preview = _activity.findViewById(R.id.surfaceView) as SurfaceView
 
-        val cameraStateCallback = CameraStateCallbackHandler(::OnCameraDeviceOpened)
-        Manager = Activity!!.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val cameraStateCallback = CameraStateCallbackHandler(::onCameraDeviceOpened)
+        _cameraManager = _activity.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
         // First check we even have cameras
-        if (Manager?.cameraIdList?.isEmpty() == true)
+        if (_cameraManager.cameraIdList.isEmpty())
         {
             // TODO Return error or fire off error event
             return
         }
 
         // Get the first rear facing camera
-        val camId = getFirstRearFacingCamera(Manager!!)
+        val camId = getFirstRearFacingCamera(_cameraManager)
         if (camId == "")
         {
             //TODO Return error or fire off error event for no rear camera
@@ -58,40 +51,40 @@ class CameraEngine(activity: Activity) {
         }
 
         // Open Camera
-        Manager!!.openCamera(camId, cameraStateCallback, Handler { true })
+        _cameraManager.openCamera(camId, cameraStateCallback, Handler { true })
     }
 
-    private fun OnCameraDeviceOpened(device: CameraDevice)
+    private fun onCameraDeviceOpened(device: CameraDevice)
     {
-        Device = device
+        _cameraDevice = device
 
-        val cameraCharacteristics = Manager?.getCameraCharacteristics(device.id)
+        val cameraCharacteristics = _cameraManager.getCameraCharacteristics(device.id)
 
-        val streamConfigurationMap = cameraCharacteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
+        val streamConfigurationMap = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
         val sizes = streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
 
         // TODO Get optimal size
         val resolution = sizes.last()
 
-        val displayRotation = Activity!!.windowManager.defaultDisplay.rotation
+        val displayRotation = _activity.windowManager.defaultDisplay.rotation
 
         val swappedDimension = areDimensionsSwapped(displayRotation, cameraCharacteristics)
 
         val rotatedPreviewWidth = if (swappedDimension) resolution.height else resolution.width
         val rotatedPreviewHeight = if (swappedDimension) resolution.width else resolution.height
 
-        Preview!!.holder.setFixedSize(rotatedPreviewWidth, rotatedPreviewHeight)
+        _preview.holder.setFixedSize(rotatedPreviewWidth, rotatedPreviewHeight)
 
-        val previewSurface = Preview!!.holder.surface
-        val captureSessionStateCallbackHandler = CaptureSessionStateCallbackHandler(::OnSessionConfigured)
+        val previewSurface = _preview.holder.surface
+        val captureSessionStateCallbackHandler = CaptureSessionStateCallbackHandler(::onSessionConfigured)
 
-        PreviewSurface = previewSurface
+        _previewSurface = previewSurface
         device.createCaptureSession(mutableListOf(previewSurface), captureSessionStateCallbackHandler, Handler { true })
     }
 
-    private fun OnSessionConfigured(session : CameraCaptureSession)
+    private fun onSessionConfigured(session : CameraCaptureSession)
     {
-        val previewRequestBuilder = Device?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)!!.apply { addTarget(PreviewSurface!!) }
+        val previewRequestBuilder = _cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply { addTarget(_previewSurface) }
 
         session.setRepeatingRequest(previewRequestBuilder.build(), object : CameraCaptureSession.CaptureCallback() {}, Handler { true })
     }
