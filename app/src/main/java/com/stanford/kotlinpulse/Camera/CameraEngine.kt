@@ -9,13 +9,21 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.params.StreamConfigurationMap
+import android.media.ImageReader
 import android.os.Handler
+import android.os.HandlerThread
+import android.util.Size
 import android.view.Surface
 import android.view.SurfaceView
 import com.stanford.kotlinpulse.R
 import java.lang.Exception
+import java.lang.RuntimeException
 
 class CameraEngine(activity: Activity) {
+
+    private var _backgroundThread : HandlerThread? = null
+
+    private var _backgroundHandler : Handler? = null
 
     private lateinit var _cameraManager : CameraManager
 
@@ -25,11 +33,16 @@ class CameraEngine(activity: Activity) {
 
     private lateinit var _previewSurface : Surface
 
+    private lateinit var _imageReader : ImageReader
+
+    private lateinit var _imageReaderHandler : ImageReaderCallbackHandler
+
     private var _activity : Activity = activity
 
     @SuppressLint("MissingPermission")
     fun start()
     {
+        startBackgroundThread()
         _preview = _activity.findViewById(R.id.surfaceView) as SurfaceView
 
         val cameraStateCallback = CameraStateCallbackHandler(::onCameraDeviceOpened)
@@ -54,17 +67,34 @@ class CameraEngine(activity: Activity) {
         _cameraManager.openCamera(camId, cameraStateCallback, Handler { true })
     }
 
-    private fun onCameraDeviceOpened(device: CameraDevice)
+    fun stop()
     {
+        stopBackgroundThread()
+
+        try {
+            _cameraDevice.close()
+            _imageReader.close()
+        }
+        catch(e : InterruptedException)
+        {
+            throw RuntimeException("Interrupted while trying to close Camera.", e)
+        }
+        finally {
+
+        }
+    }
+
+    private fun onCameraDeviceOpened(device: CameraDevice) {
         _cameraDevice = device
 
         val cameraCharacteristics = _cameraManager.getCameraCharacteristics(device.id)
 
-        val streamConfigurationMap = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
+        val streamConfigurationMap =
+            cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
         val sizes = streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
 
         // TODO Get optimal size
-        val resolution = sizes.last()
+        val resolution = Size(480,640) //sizes.last();
 
         val displayRotation = _activity.windowManager.defaultDisplay.rotation
 
@@ -76,17 +106,31 @@ class CameraEngine(activity: Activity) {
         _preview.holder.setFixedSize(rotatedPreviewWidth, rotatedPreviewHeight)
 
         val previewSurface = _preview.holder.surface
-        val captureSessionStateCallbackHandler = CaptureSessionStateCallbackHandler(::onSessionConfigured)
+        val captureSessionStateCallbackHandler =
+            CaptureSessionStateCallbackHandler(::onSessionConfigured)
 
         _previewSurface = previewSurface
-        device.createCaptureSession(mutableListOf(previewSurface), captureSessionStateCallbackHandler, Handler { true })
+
+        // Setup Image Reader
+        _imageReaderHandler = ImageReaderCallbackHandler(_backgroundHandler!!)
+        _imageReader = ImageReader.newInstance(
+            rotatedPreviewWidth,
+            rotatedPreviewHeight,
+            ImageFormat.YUV_420_888,
+            2
+        )
+        _imageReader.setOnImageAvailableListener(_imageReaderHandler, _backgroundHandler)
+
+        device.createCaptureSession(mutableListOf(_previewSurface, _imageReader.surface), captureSessionStateCallbackHandler, null)
     }
 
     private fun onSessionConfigured(session : CameraCaptureSession)
     {
-        val previewRequestBuilder = _cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply { addTarget(_previewSurface) }
+        val previewRequestBuilder = _cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        previewRequestBuilder.addTarget(_previewSurface)
+        previewRequestBuilder.addTarget(_imageReader.surface)
 
-        session.setRepeatingRequest(previewRequestBuilder.build(), object : CameraCaptureSession.CaptureCallback() {}, Handler { true })
+        session.setRepeatingRequest(previewRequestBuilder.build(), object : CameraCaptureSession.CaptureCallback() {}, _backgroundHandler)
     }
 
     private fun getFirstRearFacingCamera(manager:CameraManager): String
@@ -139,5 +183,28 @@ class CameraEngine(activity: Activity) {
         }
 
         return swappedDimensions
+    }
+
+
+    fun startBackgroundThread()
+    {
+        _backgroundThread = HandlerThread("Camera")
+        _backgroundThread?.let { test -> test.start() }
+        _backgroundThread?.let { test -> _backgroundHandler = Handler(test.looper) }
+    }
+
+
+    fun stopBackgroundThread()
+    {
+        _backgroundThread?.quitSafely()
+        try {
+            _backgroundThread?.join()
+            _backgroundThread = null
+            _backgroundHandler = null
+        }
+        catch(e : Exception)
+        {
+            println(e.stackTrace)
+        }
     }
 }

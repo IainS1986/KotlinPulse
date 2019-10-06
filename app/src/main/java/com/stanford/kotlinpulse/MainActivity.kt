@@ -11,7 +11,7 @@ import org.opencv.android.OpenCVLoader
 
 class MainActivity : AppCompatActivity() {
 
-    private var Engine : CameraEngine? = null
+    private var _cameraEngine : CameraEngine? = null
 
     override fun onCreate(savedInstanceState: Bundle?)
     {
@@ -26,16 +26,16 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        Engine = CameraEngine(this)
+        _cameraEngine = CameraEngine(this)
 
         val surfaceReadyCallback = object : SurfaceHolder.Callback
         {
-            override fun surfaceChanged(p0: SurfaceHolder?, p1: Int, p2: Int, p3: Int) { }
+            override fun surfaceChanged(p0: SurfaceHolder?, p1: Int, p2: Int, p3: Int){ }
 
-            override fun surfaceDestroyed(p0: SurfaceHolder?) { }
+            override fun surfaceDestroyed(p0: SurfaceHolder?){ }
 
             override fun surfaceCreated(p0: SurfaceHolder?) {
-                Engine?.start()
+                _cameraEngine?.start()
             }
         }
 
