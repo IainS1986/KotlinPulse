@@ -4,6 +4,8 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.SurfaceHolder
 import android.widget.Toast
+import com.jjoe64.graphview.series.DataPoint
+import com.jjoe64.graphview.series.LineGraphSeries
 import com.stanford.kotlinpulse.Camera.CameraEngine
 import com.stanford.kotlinpulse.Camera.PermissionsHelper
 import kotlinx.android.synthetic.main.activity_main.*
@@ -12,6 +14,8 @@ import org.opencv.android.OpenCVLoader
 class MainActivity : AppCompatActivity() {
 
     private var _cameraEngine : CameraEngine? = null
+
+    private lateinit var _lineSeries : LineGraphSeries<DataPoint>
 
     override fun onCreate(savedInstanceState: Bundle?)
     {
@@ -26,6 +30,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // Test OpenCV
+        if (!OpenCVLoader.initDebug()) {}
+
         _cameraEngine = CameraEngine(this)
 
         val surfaceReadyCallback = object : SurfaceHolder.Callback
@@ -35,14 +42,21 @@ class MainActivity : AppCompatActivity() {
             override fun surfaceDestroyed(p0: SurfaceHolder?){ }
 
             override fun surfaceCreated(p0: SurfaceHolder?) {
+                _cameraEngine?.buildMainHandler(_lineSeries)
                 _cameraEngine?.start()
             }
         }
 
         surfaceView.holder.addCallback(surfaceReadyCallback)
 
-        // Test OpenCV
-        if (!OpenCVLoader.initDebug()) {}
+        // Graph setup TODO Move to its own class
+        _lineSeries = LineGraphSeries<DataPoint>()
+        graph.addSeries(_lineSeries)
+    }
+
+    fun addPointToGraph(point: DataPoint)
+    {
+
     }
 
     override fun onRequestPermissionsResult(

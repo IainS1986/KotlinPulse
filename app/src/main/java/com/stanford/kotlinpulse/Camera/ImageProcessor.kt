@@ -2,6 +2,7 @@ package com.stanford.kotlinpulse.Camera
 
 import android.graphics.ImageFormat
 import android.media.Image
+import com.jjoe64.graphview.series.DataPoint
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.CvType.CV_8UC1
@@ -10,23 +11,22 @@ import org.opencv.core.MatOfDouble
 import org.opencv.imgproc.Imgproc
 import org.opencv.imgproc.Imgproc.cvtColor
 import java.nio.ByteBuffer
+import java.util.*
 
-class ImageProcessor(image : Image) : Runnable
+class ImageProcessor(private val image : Image, private val time: Long, private val mainHandler: MainHandler) : Runnable
 {
-    val frame : Image = image
-
     override fun run()
     {
 //        simpleRun()
         opencvRun()
 
         // you must close the Image though, for reuse in the ImageReader
-        frame?.close()
+        image?.close()
     }
 
     private fun simpleRun()
     {
-        val yPlane = frame.planes[0]
+        val yPlane = image.planes[0]
         val buffer = yPlane.buffer
 
         // Iterate through the buffer, taking average of the y plane in YUV (luminosity)
@@ -42,11 +42,17 @@ class ImageProcessor(image : Image) : Runnable
         println("Average Y calculated to be ${avgY}")
 
         // TODO If we want to reuse the image, rewind the buffer! Currently, we throw it away so who cares
+
+        // PPG is inverted due to the method
+        val value = 255L - avgY
+
+        // Marshal back to UI Thread
+        mainHandler.SendDataPointToGraph(DataPoint(Date(time), value.toDouble()))
     }
 
     private fun opencvRun()
     {
-        val rgbMat = yuvToRGBMat(frame)
+        val rgbMat = yuvToRGBMat(image)
         val mean = MatOfDouble()
         val std = MatOfDouble()
         Core.meanStdDev(rgbMat, mean, std)
@@ -56,6 +62,12 @@ class ImageProcessor(image : Image) : Runnable
         val g = mean.get(1, 0)[0]
         val b = mean.get(2 ,0)[0]
         println("Average RGB calculated to (${r}, ${g}, ${b})")
+
+        // PPG is inverted due to the method
+        val value = 255L - r
+
+        // Marshal back to UI Thread
+        mainHandler.SendDataPointToGraph(DataPoint(Date(time), value))
     }
 
     //https://stackoverflow.com/a/35221548/9829321

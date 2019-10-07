@@ -12,6 +12,8 @@ import android.os.HandlerThread
 import android.util.Size
 import android.view.Surface
 import android.view.SurfaceView
+import com.jjoe64.graphview.series.DataPoint
+import com.jjoe64.graphview.series.LineGraphSeries
 import com.stanford.kotlinpulse.R
 import java.lang.Exception
 import java.lang.RuntimeException
@@ -21,6 +23,8 @@ class CameraEngine(activity: Activity) {
     private var _backgroundThread : HandlerThread? = null
 
     private var _backgroundHandler : Handler? = null
+
+    private var _mainHandler : MainHandler? = null
 
     private lateinit var _cameraManager : CameraManager
 
@@ -35,6 +39,11 @@ class CameraEngine(activity: Activity) {
     private lateinit var _imageReaderHandler : ImageReaderCallbackHandler
 
     private var _activity : Activity = activity
+
+    fun buildMainHandler(lineGraphSeries: LineGraphSeries<DataPoint>)
+    {
+        _mainHandler = MainHandler(lineGraphSeries)
+    }
 
     @SuppressLint("MissingPermission")
     fun start()
@@ -109,7 +118,7 @@ class CameraEngine(activity: Activity) {
         _previewSurface = previewSurface
 
         // Setup Image Reader
-        _imageReaderHandler = ImageReaderCallbackHandler(_backgroundHandler!!)
+        _imageReaderHandler = ImageReaderCallbackHandler(_backgroundHandler!!, _mainHandler!!)
         _imageReader = ImageReader.newInstance(
             rotatedPreviewWidth,
             rotatedPreviewHeight,
