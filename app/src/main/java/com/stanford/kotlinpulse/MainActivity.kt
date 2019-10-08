@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
         graph.viewport.setMinY(0.0)
         graph.viewport.setMaxY(256.0)
         graph.viewport.setMinX(0.0)
-        graph.viewport.setMaxX(5000.0)
+        graph.viewport.setMaxX(5000000000.0) // TODO Nanoscond faff
 
         // Hide all the graph lines, axis labels ect
         graph.gridLabelRenderer.gridStyle = GridLabelRenderer.GridStyle.NONE
