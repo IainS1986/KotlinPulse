@@ -31,7 +31,7 @@ class MainHandler(lineseries: LineGraphSeries<DataPoint>) : Handler()
 
         when(msg.what)
         {
-            MSG_SEND_DATAPOINT -> _weakReference.get()?.appendData(msg.obj as DataPoint, false, 100)
+            MSG_SEND_DATAPOINT -> _weakReference.get()?.appendData(msg.obj as DataPoint, true, 5 * 30)
         }
     }
 }

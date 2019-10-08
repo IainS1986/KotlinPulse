@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.SurfaceHolder
 import android.widget.Toast
+import com.jjoe64.graphview.GridLabelRenderer
 import com.jjoe64.graphview.series.DataPoint
 import com.jjoe64.graphview.series.LineGraphSeries
 import com.stanford.kotlinpulse.Camera.CameraEngine
@@ -52,6 +53,16 @@ class MainActivity : AppCompatActivity() {
         // Graph setup TODO Move to its own class
         _lineSeries = LineGraphSeries<DataPoint>()
         graph.addSeries(_lineSeries)
+        graph.viewport.isXAxisBoundsManual = true
+        graph.viewport.setMinY(0.0)
+        graph.viewport.setMaxY(256.0)
+        graph.viewport.setMinX(0.0)
+        graph.viewport.setMaxX(5000.0)
+
+        // Hide all the graph lines, axis labels ect
+        graph.gridLabelRenderer.gridStyle = GridLabelRenderer.GridStyle.NONE
+        graph.gridLabelRenderer.isHorizontalLabelsVisible = false
+        graph.gridLabelRenderer.isVerticalLabelsVisible = false
     }
 
     fun addPointToGraph(point: DataPoint)
